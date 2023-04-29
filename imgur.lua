@@ -337,7 +337,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     and not string.match(url, "^https?://p%.imgur%.com/")
     and not string.match(url, "/download/") then
     html = read_file(file)
-    html = string.gsub(html, "\\", "")
     local json = nil
     if string.match(url, "^https?://imgur%.com/[a-zA-Z0-9]+$") then
       local canonical_url = string.match(html, '<link%s+rel="canonical"%s+href="([^"]+)"')
@@ -425,6 +424,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
       end
     end
+    html = string.gsub(html, "\\", "")
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
     end
