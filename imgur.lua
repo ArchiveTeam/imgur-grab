@@ -465,9 +465,10 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     and status_code ~= 302 then
     io.stdout:write("Server returned bad response. Skipping.\n")
     io.stdout:flush()
-    kill_grab()
+    abort_item()
   end
   if abortgrab then
+    print("Not writing to WARC.")
     return false
   end
   return true
