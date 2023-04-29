@@ -265,7 +265,7 @@ class WgetArgs(object):
             '--warc-compression-use-zstd',
             '--warc-zstd-dict-no-include',
             '--header', 'Accept-Language: en-US;q=0.9, en;q=0.8',
-            '--header', 'Cookie: postpagebeta=0'
+            '--header', 'Cookie: postpagebeta=0; over18=1'
         ]
         dict_data = ZstdDict.get_dict()
         with open(os.path.join(item['item_dir'], 'zstdict'), 'wb') as f:
