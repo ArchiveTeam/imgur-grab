@@ -117,6 +117,10 @@ allowed = function(url, parenturl)
     return true
   end
 
+  if string.match(url, "^https?://p%.imgur%.com/imageview%.gif%?") then
+    return false
+  end
+
   local search_string = "[a-zA-Z0-9]+"
   if item_type == "user" then
     search_string = "[a-zA-Z0-9%-_]+"
