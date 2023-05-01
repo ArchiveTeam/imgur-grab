@@ -34,6 +34,8 @@ local retry_url = false
 
 local postpagebeta = false
 
+math.randomseed(os.time())
+
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
 end
@@ -106,6 +108,7 @@ find_item = function(url)
       abortgrab = false
       initial_allowed = false
       tries = 0
+      retry_url = false
       item_name = item_name_new
       print("Archiving item " .. item_name)
     end
@@ -460,17 +463,31 @@ wget.callbacks.write_to_warc = function(url, http_stat)
   if not item_name then
     error("No item name found.")
   end
-  if (status_code ~= 200 or http_stat["len"] == 0)
-    and status_code ~= 301
-    and status_code ~= 302 then
-    io.stdout:write("Server returned bad response. Skipping.\n")
-    io.stdout:flush()
-    abort_item()
+  if (
+      (
+        http_stat["len"] == 0
+        and status_code == 200
+      )
+      or (
+        status_code ~= 200
+        and status_code ~= 301
+        and status_code ~= 302
+      )
+    )
+    and not (
+      status_code == 404
+      and string.match(url["url"], "/download/[^/]+/.")
+    ) then
+    print("Not writing to WARC.")
+    retry_url = true
+    return false
   end
   if abortgrab then
     print("Not writing to WARC.")
     return false
   end
+  retry_url = false
+  tries = 0
   return true
 end
 
@@ -499,9 +516,28 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     downloaded[url["url"]] = true
   end
 
-  if status_code == 0 or abortgrab then
+  if abortgrab then
     abort_item()
     return wget.actions.EXIT
+  end
+
+  if status_code == 0 or retry_url then
+    io.stdout:write("Server returned bad response. Sleeping.\n")
+    io.stdout:flush()
+    tries = tries + 1
+    if tries > 6 or status_code == 404 then
+      tries = 0
+      abort_item()
+      return wget.actions.EXIT
+    end
+    local sleep_time = math.random(
+      math.floor(math.pow(2, tries-0.5)),
+      math.floor(math.pow(2, tries))
+    )
+    io.stdout:write("Sleeping " .. sleep_time .. " seconds.\n")
+    io.stdout:flush()
+    os.execute("sleep " .. sleep_time)
+    return wget.actions.CONTINUE
   end
 
   tries = 0
