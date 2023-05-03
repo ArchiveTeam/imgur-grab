@@ -120,7 +120,14 @@ allowed = function(url, parenturl)
     return true
   end
 
-  if string.match(url, "^https?://p%.imgur%.com/imageview%.gif%?") then
+  if string.match(url, "^https?://[pi]%.imgur%.com/imageview%.gif%?")
+    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fb$") then
+    return false
+  end
+
+  if item_type == "i"
+    and string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "[bghlmrst]%.jpg$") then
+    discover_item(discovered_items, "thumbs:" .. item_value)
     return false
   end
 
@@ -309,13 +316,15 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   if item_type == "i" then
     local a, b = string.match(url, "^(https?://i%.imgur%.com/[a-zA-Z0-9]+)([^%?]-)$")
     if a and b and string.match(a, "/([a-zA-Z0-9]+)$") == item_value then
-      for _, char in pairs({"", "b", "g", "h", "l", "m", "r", "s", "t"}) do
+      check(a .. ".jpg")
+      discover_item(discovered_items, "thumbs:" .. item_value)
+      --[[for _, char in pairs({"", "b", "g", "h", "l", "m", "r", "s", "t"}) do
         check(a .. char .. ".jpg")
       end
       check(a .. "_d.webp?maxwidth=128&shape=square")
       check(a .. "_d.webp?maxwidth=760&fidelity=grand")
       check(a .. "_d.png?maxwidth=200&fidelity=grand")
-      check(a .. "_d.png?maxwidth=520&shape=thumb&fidelity=high")
+      check(a .. "_d.png?maxwidth=520&shape=thumb&fidelity=high")]]
     end
     if string.match(url, item_value .. "%.mp4$") then
       check(string.gsub(url, "%.mp4", "_lq%.mp4"))
