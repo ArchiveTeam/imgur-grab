@@ -121,7 +121,11 @@ allowed = function(url, parenturl)
   end
 
   if string.match(url, "^https?://[pi]%.imgur%.com/imageview%.gif%?")
-    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fb$") then
+    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fb$")
+    or string.match(url, "^https?://api%.imgur%.com/")
+    or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
+    or string.match(url, "^https?://m%.imgur%.com/")
+    or string.match(url, "^https?://[^/]*imgur%.io/") then
     return false
   end
 
@@ -131,13 +135,16 @@ allowed = function(url, parenturl)
     return false
   end
 
-  local search_string = "[a-zA-Z0-9]+"
-  if item_type == "user" then
-    search_string = "[a-zA-Z0-9%-_]+"
-  end
-  for s in string.gmatch(url, "(" .. search_string .. ")") do
-    if ids[s] or ids[string.match(s, "^(.+).$")] then
-      return true
+  if string.match(url, "^https?://[^/]*imgur%.com/")
+    or string.match(url, "^https?://[^/]*imgur%.io/") then
+    local search_string = "[a-zA-Z0-9]+"
+    if item_type == "user" then
+      search_string = "[a-zA-Z0-9%-_]+"
+    end
+    for s in string.gmatch(url, "(" .. search_string .. ")") do
+      if ids[s] or ids[string.match(s, "^(.+).$")] then
+        return true
+      end
     end
   end
 
