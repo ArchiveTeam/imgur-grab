@@ -123,9 +123,10 @@ allowed = function(url, parenturl)
   if string.match(url, "^https?://[pi]%.imgur%.com/imageview%.gif%?")
     or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fb$")
     or string.match(url, "^https?://api%.imgur%.com/")
-    or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
+    --or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
     or string.match(url, "^https?://m%.imgur%.com/")
-    or string.match(url, "^https?://[^/]*imgur%.io/") then
+    or string.match(url, "^https?://[^/]*imgur%.io/")
+    or string.match(url, "^https?://[^/]+/download/") then
     return false
   end
 
