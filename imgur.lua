@@ -138,7 +138,7 @@ allowed = function(url, parenturl)
       discover_item(discovered_items, "thumbs:" .. item_value)
       return false
     elseif string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "l%.png$") then
-      discover_item(discovered_items, "thumbs-l:" .. item_value)
+      discover_item(discovered_items, "thumbs-l-png:" .. item_value)
       return false
     end
   end
