@@ -445,7 +445,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         check("https://imgur.com/download/" .. item_value .. "/")
         check("https://imgur.com/download/" .. item_value .. "/" .. json["title"])
         check("https://imgur.com/" .. item_value .. "/embed?ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
-        check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
+        --check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
       end
     end
     html = string.gsub(html, "\\", "")
