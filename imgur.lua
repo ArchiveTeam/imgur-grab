@@ -499,6 +499,14 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     retry_url = true
     return false
   end
+  if string.match(url["url"], "^https?://imgur%.com/[a-zA-Z0-9]+$") then
+    local html = read_file(http_stat["local_file"])
+    if not string.match(html, "item%s*:%s*({.-})%s*};") then
+      print("Found incorrect JSON data on page.")
+      retry_url = true
+      return false
+    end
+  end
   if abortgrab then
     print("Not writing to WARC.")
     return false
