@@ -60,7 +60,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230508.02'
+VERSION = '20230508.03'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -320,7 +320,7 @@ project = Project(
     title='Imgur',
     project_html='''
         <img class="project-logo" alt="Project logo" src="https://wiki.archiveteam.org/images/c/c4/Imgur-icon.png" height="50px" title=""/>
-        <h2>imgur.com <span class="links"><a href="https://imgur.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/imgur/">Leaderboard</a></span></h2>
+        <h2>imgur.com <span class="links"><a href="https://imgur.com/">Website</a> &middot; <a href="https://tracker.archiveteam.org/imgur/">Leaderboard</a></span></h2>
         <p>Archiving Imgur.</p>
     '''
 )
