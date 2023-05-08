@@ -133,10 +133,14 @@ allowed = function(url, parenturl)
     return false
   end
 
-  if item_type == "i"
-    and string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "[bghlmrst]%.jpg$") then
-    discover_item(discovered_items, "thumbs:" .. item_value)
-    return false
+  if item_type == "i" then
+    if string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "[bghlmrst]%.jpg$") then
+      discover_item(discovered_items, "thumbs:" .. item_value)
+      return false
+    elseif string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "l%.png$") then
+      discover_item(discovered_items, "thumbs-l:" .. item_value)
+      return false
+    end
   end
 
   if string.match(url, "^https?://[^/]*imgur%.com/")
