@@ -359,6 +359,10 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
+  if string.match(url, "%?") then
+    check(string.match(url, "^([^%?]+)%?"))
+  end
+
   if allowed(url)
     and (
       status_code < 300
