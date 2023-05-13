@@ -491,6 +491,11 @@ wget.callbacks.write_to_warc = function(url, http_stat)
   if not item_name then
     error("No item name found.")
   end
+  if status_code == 404
+    and item_type == "i"
+    and string.match(url["url"], "^https?://imgur%.com/" .. item_value .. "$") then
+    return true
+  end
   if (
       (
         http_stat["len"] == 0
