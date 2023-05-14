@@ -566,7 +566,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:write("Server returned bad response. Sleeping.\n")
     io.stdout:flush()
     tries = tries + 1
-    if tries > 8 or status_code == 404 then
+    if tries > 2 or status_code == 404 then
       tries = 0
       abort_item()
       return wget.actions.EXIT
