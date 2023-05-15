@@ -526,8 +526,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       for _, comment_data in pairs(json["data"]["captions"]) do
         if comment_data["album_cover"] then
           discover_item(discovered_items, "i:" .. comment_data["album_cover"])
-          discover_item(discovered_items, "user:" .. author)
         end
+        discover_item(discovered_items, "user:" .. comment_data["author"])
       end
     end
     html = string.gsub(html, "\\", "")
