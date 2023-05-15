@@ -378,12 +378,21 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     if data["hash"] ~= item_value then
       error("Inconsistent gallery hash.")
     end
-    discover_item(discovered_items, "i:" .. data["album_cover"])
+    if data["album_cover"] then
+      discover_item(discovered_items, "i:" .. data["album_cover"])
+    end
     if data["account_url"] then
       discover_item(discovered_items, "user:" .. data["account_url"])
     end
+    local found_images = 0
     for _, image_data in pairs(data["album_images"]["images"]) do
+      found_images = found_images + 1
       discover_item(discovered_items, "i:" .. image_data["hash"])
+    end
+    if found_images == 0 then
+      io.stdout:write("No images found.\n")
+      io.stdout:flush()
+      abort_item()
     end
   end
 
