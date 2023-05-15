@@ -31,6 +31,7 @@ local bad_items = {}
 local ids = {}
 
 local retry_url = false
+local allow_video = false
 
 local postpagebeta = false
 
@@ -109,6 +110,7 @@ find_item = function(url)
       initial_allowed = false
       tries = 0
       retry_url = false
+      allow_video = false
       item_name = item_name_new
       print("Archiving item " .. item_name)
     end
@@ -129,7 +131,12 @@ allowed = function(url, parenturl)
     --or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
     or string.match(url, "^https?://m%.imgur%.com/")
     or string.match(url, "^https?://[^/]*imgur%.io/")
-    or string.match(url, "^https?://[^/]+/download/") then
+    or string.match(url, "^https?://[^/]+/download/")
+    or string.match(url, "_lq%.mp4$")
+    or (
+      not allow_video
+      and string.match(url, "%.mp4$")
+    ) then
     return false
   end
 
@@ -450,6 +457,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       if string.match(url, "^https?://imgur%.com/[a-zA-Z0-9]+$") then
         local json = string.match(html, "item%s*:%s*({.-})%s*};")
         json = JSON:decode(json)
+        if json["ext"] == ".mp4"
+          or json["ext"] == ".mpeg4"
+          or json["prefer_video"] then
+          allow_video = true
+        end
+        check("https://i.imgur.com/" .. json["hash"] .. json["ext"])
+        check("https://i.imgur.com/" .. json["hash"] .. ".jpg")
         if json["account_url"] then
           discover_item(discovered_items, "user:" .. json["account_url"])
         end
