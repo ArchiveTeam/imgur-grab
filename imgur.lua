@@ -486,7 +486,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         if item_type == "i" then
           if json["ext"] == ".mp4"
             or json["ext"] == ".mpeg4"
-            or json["prefer_video"] then
+            --[[or json["prefer_video"] ]] then
             allow_video = true
           end
           check("https://i.imgur.com/" .. json["hash"] .. json["ext"])
