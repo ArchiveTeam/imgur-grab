@@ -31,6 +31,7 @@ local bad_items = {}
 local ids = {}
 
 local retry_url = false
+local allow_video = false
 
 local postpagebeta = false
 
@@ -96,6 +97,10 @@ find_item = function(url)
   end
   if not value then
     value = string.match(url, "^https?://imgur%.com/gallery/([a-zA-Z0-9]+)$")
+    type_ = "gallery"
+  end
+  if not value then
+    value = string.match(url, "^https?://imgur%.com/a/([a-zA-Z0-9]+)$")
     type_ = "album"
   end
   if value then
@@ -109,6 +114,7 @@ find_item = function(url)
       initial_allowed = false
       tries = 0
       retry_url = false
+      allow_video = false
       item_name = item_name_new
       print("Archiving item " .. item_name)
     end
@@ -129,7 +135,12 @@ allowed = function(url, parenturl)
     --or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
     or string.match(url, "^https?://m%.imgur%.com/")
     or string.match(url, "^https?://[^/]*imgur%.io/")
-    or string.match(url, "^https?://[^/]+/download/") then
+    or string.match(url, "^https?://[^/]+/download/")
+    or string.match(url, "_lq%.mp4$")
+    or (
+      not allow_video
+      and string.match(url, "%.mp4$")
+    ) then
     return false
   end
 
@@ -363,6 +374,28 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     check(string.match(url, "^([^%?]+)%?"))
   end
 
+  local function extract_gallery_data(data)
+    if data["hash"] ~= item_value then
+      error("Inconsistent gallery hash.")
+    end
+    if data["album_cover"] then
+      discover_item(discovered_items, "i:" .. data["album_cover"])
+    end
+    if data["account_url"] then
+      discover_item(discovered_items, "user:" .. data["account_url"])
+    end
+    local found_images = 0
+    for _, image_data in pairs(data["album_images"]["images"]) do
+      found_images = found_images + 1
+      discover_item(discovered_items, "i:" .. image_data["hash"])
+    end
+    if found_images == 0 then
+      io.stdout:write("No images found.\n")
+      io.stdout:flush()
+      abort_item()
+    end
+  end
+
   if allowed(url)
     and (
       status_code < 300
@@ -447,16 +480,54 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         -- todo comments, download
       end
     else
-      if string.match(url, "^https?://imgur%.com/[a-zA-Z0-9]+$") then
+      if string.match(url, "^https?://imgur%.com/[a-z]*/?[a-zA-Z0-9]+$") then
         local json = string.match(html, "item%s*:%s*({.-})%s*};")
         json = JSON:decode(json)
-        if json["account_url"] then
-          discover_item(discovered_items, "user:" .. json["account_url"])
+        if item_type == "i" then
+          if json["ext"] == ".mp4"
+            or json["ext"] == ".mpeg4"
+            --[[or json["prefer_video"] ]] then
+            allow_video = true
+          end
+          check("https://i.imgur.com/" .. json["hash"] .. json["ext"])
+          check("https://i.imgur.com/" .. json["hash"] .. ".jpg")
+          if json["account_url"] then
+            discover_item(discovered_items, "user:" .. json["account_url"])
+          end
+          check("https://imgur.com/download/" .. item_value .. "/")
+          check("https://imgur.com/download/" .. item_value .. "/" .. json["title"])
+          --check("https://imgur.com/" .. item_value .. "/embed?ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
+          --check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
+        elseif item_type == "album" then
+          if json["in_gallery"] then
+            discover_item(discovered_items, "gallery:" .. item_value)
+          end
+          if json["in_gallery"]
+            or (
+              json["account_url"]
+              and not string.match(html, "[nN][sS][fF][wW]")
+            ) then
+            io.stdout:write("This is likely not going to be deleted. Skipping.\n")
+            io.stdout:flush()
+            abort_item()
+            return {}
+          end
+          --check("https://imgur.com/gallery/" .. json["hash"] .. "/comment/best/hit.json")
+          extract_gallery_data(json)
         end
-        check("https://imgur.com/download/" .. item_value .. "/")
-        check("https://imgur.com/download/" .. item_value .. "/" .. json["title"])
-        --check("https://imgur.com/" .. item_value .. "/embed?ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
-        --check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
+      end
+    end
+    if string.match(url, "/gallery/[^/]+/comment/best/hit%.json$") then
+      local json = JSON:decode(html)
+      if not json["success"] then
+        error("Invalid comment data.")
+      end
+      extract_gallery_data(json["data"]["image"])
+      for _, comment_data in pairs(json["data"]["captions"]) do
+        if comment_data["album_cover"] then
+          discover_item(discovered_items, "i:" .. comment_data["album_cover"])
+        end
+        discover_item(discovered_items, "user:" .. comment_data["author"])
       end
     end
     html = string.gsub(html, "\\", "")
