@@ -634,14 +634,25 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
 
   if status_code == 0 or retry_url then
-    io.stdout:write("Server returned bad response. Sleeping.\n")
+    io.stdout:write("Server returned bad response.")
     io.stdout:flush()
     tries = tries + 1
-    if tries > 8 or status_code == 404 then
+    local i_5_char_403 = item_type == "i" and status_code == 403 and string.len(item_value) == 5
+    if (i_5_char_403 and tries > 15)
+      or (not i_5_char_403 and (tries > 8 or status_code == 404)) then
+      io.stdout:write(" Skipping.\n")
+      io.stdout:flush()
       tries = 0
       abort_item()
       return wget.actions.EXIT
     end
+    if i_5_char_403 then
+      io.stdout:write("\n")
+      io.stdout:flush()
+      return wget.actions.CONTINUE
+    end
+    io.stdout:write(" Sleeping.\n")
+    io.stdout:flush()
     local sleep_time = math.random(
       math.floor(math.pow(2, tries-0.5)),
       math.floor(math.pow(2, tries))

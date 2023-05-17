@@ -60,7 +60,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230516.01'
+VERSION = '20230517.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -155,9 +155,10 @@ class SetBadUrls(SimpleTask):
         items_lower = [s.lower() for s in items]
         with open('%(item_dir)s/%(warc_file_base)s_bad-items.txt' % item, 'r') as f:
             for aborted_item in f:
+                aborted_item_original = aborted_item
                 aborted_item = aborted_item.strip().lower()
                 index = items_lower.index(aborted_item)
-                item.log_output('Item {} is aborted.'.format(aborted_item))
+                item.log_output('Item {} is aborted.'.format(aborted_item_original))
                 items.pop(index)
                 items_lower.pop(index)
         item['item_name'] = '\0'.join(items)
