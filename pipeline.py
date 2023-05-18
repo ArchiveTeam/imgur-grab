@@ -60,7 +60,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230517.02'
+VERSION = '20230518.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -265,8 +265,7 @@ class WgetArgs(object):
             '--warc-dedup-url-agnostic',
             '--warc-compression-use-zstd',
             '--warc-zstd-dict-no-include',
-            '--header', 'Accept-Language: en-US;q=0.9, en;q=0.8',
-            '--header', 'Cookie: postpagebeta=0; over18=1'
+            '--header', 'Accept-Language: en-US;q=0.9, en;q=0.8'
         ]
         dict_data = ZstdDict.get_dict()
         with open(os.path.join(item['item_dir'], 'zstdict'), 'wb') as f:
@@ -276,6 +275,15 @@ class WgetArgs(object):
         wget_args.extend([
             '--warc-zstd-dict', ItemInterpolation('%(item_dir)s/zstdict'),
         ])
+
+        cookies = 'Cookie: '
+        for c in 'postpagebeta':
+            if random.random() < 0.5:
+                c = c.upper()
+            cookies += c
+        cookies += '=0; over18=1'
+        print('Using cookies header \'{}\'.'.format(cookies))
+        wget_args.extend(['--header', cookies])
 
         if '--concurrent' in sys.argv:
             concurrency = int(sys.argv[sys.argv.index('--concurrent')+1])
