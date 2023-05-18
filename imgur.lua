@@ -505,7 +505,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
           if json["in_gallery"]
             or (
               json["account_url"]
-              and not string.match(html, "[nN][sS][fF][wW]")
+              and json["adConfig"]["nsfw_score"] == 0
+              --[[and not string.match(html, "[nN][sS][fF][wW]")
+              and not string.match(html, "[aA][dD][uU][lL][tT]")
+              and not string.match(html, "[sS][eE][xX]")
+              and not string.match(html, "[pP][oO][rR][nN]")
+              and not json["is_mature"]
+              and not json["nsfw"] ]]
             ) then
             io.stdout:write("This is likely not going to be deleted. Skipping.\n")
             io.stdout:flush()
