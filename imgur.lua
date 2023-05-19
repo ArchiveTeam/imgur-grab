@@ -24,6 +24,7 @@ local downloaded = {}
 local addedtolist = {}
 local abortgrab = false
 local killgrab = false
+local logged_response = false
 
 local discovered_outlinks = {}
 local discovered_items = {}
@@ -34,6 +35,7 @@ local retry_url = false
 local allow_video = false
 
 local postpagebeta = false
+local webpage_404 = false
 
 math.randomseed(os.time())
 
@@ -115,6 +117,7 @@ find_item = function(url)
       tries = 0
       retry_url = false
       allow_video = false
+      webpage_404 = false
       item_name = item_name_new
       print("Archiving item " .. item_name)
     end
@@ -396,6 +399,11 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
+  if webpage_404
+    and string.match(url, "^https?://imgur%.com/[0-9a-zA-Z]+$") then
+    check("https://i.imgur.com/" .. item_value .. ".gifv")
+  end
+
   if allowed(url)
     and (
       status_code < 300
@@ -537,6 +545,12 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       end
     end
     html = string.gsub(html, "\\", "")
+    if string.match(url, "%.gifv") then
+      if string.match(html, '<meta%s+property="og:video"%s+content="[^"]+%.mp4"') then
+        allow_video = true
+      end
+      html = string.gsub(html, '<meta%s+name="twitter:player:stream"%s+content="[^"]+%.mp4"%s*/>', "")
+    end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
     end
@@ -564,9 +578,41 @@ end
 
 wget.callbacks.write_to_warc = function(url, http_stat)
   status_code = http_stat["statcode"]
+  url_count = url_count + 1
+  io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. " \n")
+  io.stdout:flush()
+  logged_response = true
   find_item(url["url"])
   if not item_name then
     error("No item name found.")
+  end
+  if item_type ~= "user" and item_type ~= "i" then
+    discover_item(discovered_items, "i:" .. item_value)
+  end
+  if status_code == 200
+    and webpage_404
+    and discover_item(discovered_items, "i_webpage:" .. item_value) then
+    io.stdout:write("The i.imgur.com version exists.\n")
+    io.stdout:flush()
+  end
+  if status_code == 302
+    and string.match(http_stat["newloc"], "removed") then
+    io.stdout:write("Got a 302 to the removed image.\n")
+    io.stdout:flush()
+    abort_item()
+    return false
+  end
+  if string.match(url["url"], "^https?://imgur%.com/[0-9a-zA-Z]+$") then
+    if status_code == 404 then
+      io.stdout:write("The web page gives 404, checking if this exists on i.imgur.com.\n")
+      io.stdout:flush()
+      webpage_404 = true
+    elseif status_code ~= 200 then
+      io.stdout:write("Odd status code on web page.\n")
+      io.stdout:flush()
+      abort_item()
+    end
+    return false
   end
   if (
       (
@@ -607,9 +653,12 @@ end
 wget.callbacks.httploop_result = function(url, err, http_stat)
   status_code = http_stat["statcode"]
   
-  url_count = url_count + 1
-  io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. " \n")
-  io.stdout:flush()
+  if not logged_response then
+    url_count = url_count + 1
+    io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. " \n")
+    io.stdout:flush()
+  end
+  logged_response = false
 
   if killgrab then
     return wget.actions.ABORT
