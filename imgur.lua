@@ -586,6 +586,12 @@ wget.callbacks.write_to_warc = function(url, http_stat)
   if not item_name then
     error("No item name found.")
   end
+  if http_stat["len"] == 503 then
+    io.stdout:write("Same size as the deleted content image.\n")
+    io.stdout:flush()
+    abort_item()
+    return false
+  end
   if item_type ~= "user" and item_type ~= "i" then
     discover_item(discovered_items, "i:" .. item_value)
   end
