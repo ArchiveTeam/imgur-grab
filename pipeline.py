@@ -60,7 +60,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230520.01'
+VERSION = '20230522.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -276,12 +276,18 @@ class WgetArgs(object):
             '--warc-zstd-dict', ItemInterpolation('%(item_dir)s/zstdict'),
         ])
 
-        cookies = 'Cookie: '
-        for c in 'postpagebeta':
-            if random.random() < 0.5:
-                c = c.upper()
-            cookies += c
-        cookies += '=0; over18=1'
+        random_upper = lambda s: ''.join([
+            c.upper() if random.random() < 0.5 else c
+            for c in s
+        ])
+
+        cookies = ''.join([
+            'Cookie: ',
+            random_upper('postpagebeta'),
+            '=',
+            random_upper(random.choice(('no', 'false'))),
+            '; over18=1'
+        ])
         print('Using cookies header \'{}\'.'.format(cookies))
         wget_args.extend(['--header', cookies])
 
