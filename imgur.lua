@@ -24,6 +24,7 @@ local downloaded = {}
 local addedtolist = {}
 local abortgrab = false
 local killgrab = false
+local logged_response = false
 
 local discovered_outlinks = {}
 local discovered_items = {}
@@ -31,8 +32,12 @@ local bad_items = {}
 local ids = {}
 
 local retry_url = false
+local allow_video = false
 
 local postpagebeta = false
+local webpage_404 = false
+
+math.randomseed(os.time())
 
 for ignore in io.open("ignore-list", "r"):lines() do
   downloaded[ignore] = true
@@ -94,6 +99,10 @@ find_item = function(url)
   end
   if not value then
     value = string.match(url, "^https?://imgur%.com/gallery/([a-zA-Z0-9]+)$")
+    type_ = "gallery"
+  end
+  if not value then
+    value = string.match(url, "^https?://imgur%.com/a/([a-zA-Z0-9]+)$")
     type_ = "album"
   end
   if value then
@@ -106,6 +115,9 @@ find_item = function(url)
       abortgrab = false
       initial_allowed = false
       tries = 0
+      retry_url = false
+      allow_video = false
+      webpage_404 = false
       item_name = item_name_new
       print("Archiving item " .. item_name)
     end
@@ -117,13 +129,44 @@ allowed = function(url, parenturl)
     return true
   end
 
-  local search_string = "[a-zA-Z0-9]+"
-  if item_type == "user" then
-    search_string = "[a-zA-Z0-9%-_]+"
+  if string.match(url, "^https?://[pi]%.imgur%.com/imageview%.gif%?")
+    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fb$")
+    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?twitter$")
+    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?play$")
+    or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fbplay$")
+    or string.match(url, "^https?://api%.imgur%.com/")
+    --or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
+    or string.match(url, "^https?://m%.imgur%.com/")
+    or string.match(url, "^https?://[^/]*imgur%.io/")
+    or string.match(url, "^https?://[^/]+/download/")
+    or string.match(url, "_lq%.mp4$")
+    or (
+      not allow_video
+      and string.match(url, "%.mp4$")
+    ) then
+    return false
   end
-  for s in string.gmatch(url, "(" .. search_string .. ")") do
-    if ids[s] or ids[string.match(s, "^(.+).$")] then
-      return true
+
+  if item_type == "i" then
+    if string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "[bghlmrst]%.jpg$") then
+      discover_item(discovered_items, "thumbs:" .. item_value)
+      return false
+    elseif string.match(url, "^https?://i%.imgur%.com/" .. item_value .. "l%.png$") then
+      discover_item(discovered_items, "thumbs-l-png:" .. item_value)
+      return false
+    end
+  end
+
+  if string.match(url, "^https?://[^/]*imgur%.com/")
+    or string.match(url, "^https?://[^/]*imgur%.io/") then
+    local search_string = "[a-zA-Z0-9]+"
+    if item_type == "user" then
+      search_string = "[a-zA-Z0-9%-_]+"
+    end
+    for s in string.gmatch(url, "(" .. search_string .. ")") do
+      if ids[s] or ids[string.match(s, "^(.+).$")] then
+        return true
+      end
     end
   end
 
@@ -302,13 +345,15 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   if item_type == "i" then
     local a, b = string.match(url, "^(https?://i%.imgur%.com/[a-zA-Z0-9]+)([^%?]-)$")
     if a and b and string.match(a, "/([a-zA-Z0-9]+)$") == item_value then
-      for _, char in pairs({"", "b", "g", "h", "l", "m", "r", "s", "t"}) do
+      check(a .. ".jpg")
+      discover_item(discovered_items, "thumbs:" .. item_value)
+      --[[for _, char in pairs({"", "b", "g", "h", "l", "m", "r", "s", "t"}) do
         check(a .. char .. ".jpg")
       end
       check(a .. "_d.webp?maxwidth=128&shape=square")
       check(a .. "_d.webp?maxwidth=760&fidelity=grand")
       check(a .. "_d.png?maxwidth=200&fidelity=grand")
-      check(a .. "_d.png?maxwidth=520&shape=thumb&fidelity=high")
+      check(a .. "_d.png?maxwidth=520&shape=thumb&fidelity=high")]]
     end
     if string.match(url, item_value .. "%.mp4$") then
       check(string.gsub(url, "%.mp4", "_lq%.mp4"))
@@ -328,6 +373,37 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
+  if string.match(url, "%?") then
+    check(string.match(url, "^([^%?]+)%?"))
+  end
+
+  local function extract_gallery_data(data)
+    if data["hash"] ~= item_value then
+      error("Inconsistent gallery hash.")
+    end
+    if data["album_cover"] then
+      discover_item(discovered_items, "i:" .. data["album_cover"])
+    end
+    if data["account_url"] then
+      discover_item(discovered_items, "user:" .. data["account_url"])
+    end
+    local found_images = 0
+    for _, image_data in pairs(data["album_images"]["images"]) do
+      found_images = found_images + 1
+      discover_item(discovered_items, "i:" .. image_data["hash"])
+    end
+    if found_images == 0 then
+      io.stdout:write("No images found.\n")
+      io.stdout:flush()
+      abort_item()
+    end
+  end
+
+  if webpage_404
+    and string.match(url, "^https?://imgur%.com/[0-9a-zA-Z]+$") then
+    check("https://i.imgur.com/" .. item_value .. ".gifv")
+  end
+
   if allowed(url)
     and (
       status_code < 300
@@ -337,7 +413,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     and not string.match(url, "^https?://p%.imgur%.com/")
     and not string.match(url, "/download/") then
     html = read_file(file)
-    html = string.gsub(html, "\\", "")
     local json = nil
     if string.match(url, "^https?://imgur%.com/[a-zA-Z0-9]+$") then
       local canonical_url = string.match(html, '<link%s+rel="canonical"%s+href="([^"]+)"')
@@ -413,17 +488,68 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         -- todo comments, download
       end
     else
-      if string.match(url, "^https?://imgur%.com/[a-zA-Z0-9]+$") then
+      if string.match(url, "^https?://imgur%.com/[a-z]*/?[a-zA-Z0-9]+$") then
         local json = string.match(html, "item%s*:%s*({.-})%s*};")
         json = JSON:decode(json)
-        if json["account_url"] then
-          discover_item(discovered_items, "user:" .. json["account_url"])
+        if item_type == "i" then
+          if json["ext"] == ".mp4"
+            or json["ext"] == ".mpeg4"
+            --[[or json["prefer_video"] ]] then
+            allow_video = true
+          end
+          check("https://i.imgur.com/" .. json["hash"] .. json["ext"])
+          check("https://i.imgur.com/" .. json["hash"] .. ".jpg")
+          if json["account_url"] then
+            discover_item(discovered_items, "user:" .. json["account_url"])
+          end
+          check("https://imgur.com/download/" .. item_value .. "/")
+          check("https://imgur.com/download/" .. item_value .. "/" .. json["title"])
+          --check("https://imgur.com/" .. item_value .. "/embed?ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
+          --check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
+        elseif item_type == "album" then
+          if json["in_gallery"] then
+            discover_item(discovered_items, "gallery:" .. item_value)
+          end
+          if json["in_gallery"]
+            or (
+              json["account_url"]
+              and json["adConfig"]["nsfw_score"] == 0
+              --[[and not string.match(html, "[nN][sS][fF][wW]")
+              and not string.match(html, "[aA][dD][uU][lL][tT]")
+              and not string.match(html, "[sS][eE][xX]")
+              and not string.match(html, "[pP][oO][rR][nN]")
+              and not json["is_mature"]
+              and not json["nsfw"] ]]
+            ) then
+            io.stdout:write("This is likely not going to be deleted. Skipping.\n")
+            io.stdout:flush()
+            abort_item()
+            return {}
+          end
+          --check("https://imgur.com/gallery/" .. json["hash"] .. "/comment/best/hit.json")
+          extract_gallery_data(json)
         end
-        check("https://imgur.com/download/" .. item_value .. "/")
-        check("https://imgur.com/download/" .. item_value .. "/" .. json["title"])
-        check("https://imgur.com/" .. item_value .. "/embed?ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
-        check("https://imgur.com/" .. item_value .. "/embed?context=false&ref=https%3A%2F%2Fimgur.com%2F" .. item_value .. "&analytics=false&w=500")
       end
+    end
+    if string.match(url, "/gallery/[^/]+/comment/best/hit%.json$") then
+      local json = JSON:decode(html)
+      if not json["success"] then
+        error("Invalid comment data.")
+      end
+      extract_gallery_data(json["data"]["image"])
+      for _, comment_data in pairs(json["data"]["captions"]) do
+        if comment_data["album_cover"] then
+          discover_item(discovered_items, "i:" .. comment_data["album_cover"])
+        end
+        discover_item(discovered_items, "user:" .. comment_data["author"])
+      end
+    end
+    html = string.gsub(html, "\\", "")
+    if string.match(url, "%.gifv") then
+      if string.match(html, '<meta%s+property="og:video"%s+content="[^"]+%.mp4"') then
+        allow_video = true
+      end
+      html = string.gsub(html, '<meta%s+name="twitter:player:stream"%s+content="[^"]+%.mp4"%s*/>', "")
     end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
@@ -452,29 +578,93 @@ end
 
 wget.callbacks.write_to_warc = function(url, http_stat)
   status_code = http_stat["statcode"]
+  url_count = url_count + 1
+  io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. " \n")
+  io.stdout:flush()
+  logged_response = true
   find_item(url["url"])
   if not item_name then
     error("No item name found.")
   end
-  if (status_code ~= 200 or http_stat["len"] == 0)
-    and status_code ~= 301
-    and status_code ~= 302 then
-    io.stdout:write("Server returned bad response. Skipping.\n")
+  if http_stat["len"] == 503 then
+    io.stdout:write("Same size as the deleted content image.\n")
     io.stdout:flush()
-    kill_grab()
-  end
-  if abortgrab then
+    abort_item()
     return false
   end
+  if item_type ~= "user" and item_type ~= "i" then
+    discover_item(discovered_items, "i:" .. item_value)
+  end
+  if status_code == 200
+    and webpage_404
+    and discover_item(discovered_items, "i_webpage:" .. item_value) then
+    io.stdout:write("The i.imgur.com version exists.\n")
+    io.stdout:flush()
+  end
+  if status_code == 302
+    and string.match(http_stat["newloc"], "removed") then
+    io.stdout:write("Got a 302 to the removed image.\n")
+    io.stdout:flush()
+    abort_item()
+    return false
+  end
+  if string.match(url["url"], "^https?://imgur%.com/[0-9a-zA-Z]+$") then
+    if status_code == 404 then
+      io.stdout:write("The web page gives 404, checking if this exists on i.imgur.com.\n")
+      io.stdout:flush()
+      webpage_404 = true
+    elseif status_code ~= 200 then
+      io.stdout:write("Odd status code on web page.\n")
+      io.stdout:flush()
+      abort_item()
+    end
+    return false
+  end
+  if (
+      (
+        http_stat["len"] == 0
+        and status_code == 200
+      )
+      or (
+        status_code ~= 200
+        and status_code ~= 301
+        and status_code ~= 302
+      )
+    )
+    and not (
+      status_code == 404
+      and string.match(url["url"], "/download/[^/]+/.")
+    ) then
+    print("Not writing to WARC.")
+    retry_url = true
+    return false
+  end
+  if string.match(url["url"], "^https?://imgur%.com/[a-zA-Z0-9]+$") then
+    local html = read_file(http_stat["local_file"])
+    if not string.match(html, "item%s*:%s*({.-})%s*};") then
+      print("Found incorrect JSON data on page.")
+      retry_url = true
+      return false
+    end
+  end
+  if abortgrab then
+    print("Not writing to WARC.")
+    return false
+  end
+  retry_url = false
+  tries = 0
   return true
 end
 
 wget.callbacks.httploop_result = function(url, err, http_stat)
   status_code = http_stat["statcode"]
   
-  url_count = url_count + 1
-  io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. " \n")
-  io.stdout:flush()
+  if not logged_response then
+    url_count = url_count + 1
+    io.stdout:write(url_count .. "=" .. status_code .. " " .. url["url"] .. " \n")
+    io.stdout:flush()
+  end
+  logged_response = false
 
   if killgrab then
     return wget.actions.ABORT
@@ -494,9 +684,39 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     downloaded[url["url"]] = true
   end
 
-  if status_code == 0 or abortgrab then
+  if abortgrab then
     abort_item()
     return wget.actions.EXIT
+  end
+
+  if status_code == 0 or retry_url then
+    io.stdout:write("Server returned bad response.")
+    io.stdout:flush()
+    tries = tries + 1
+    local i_5_char_403 = item_type == "i" and status_code == 403 and string.len(item_value) == 5
+    if (i_5_char_403 and tries > 15)
+      or (not i_5_char_403 and (tries > 8 or status_code == 404)) then
+      io.stdout:write(" Skipping.\n")
+      io.stdout:flush()
+      tries = 0
+      abort_item()
+      return wget.actions.EXIT
+    end
+    if i_5_char_403 then
+      io.stdout:write("\n")
+      io.stdout:flush()
+      return wget.actions.CONTINUE
+    end
+    io.stdout:write(" Sleeping.\n")
+    io.stdout:flush()
+    local sleep_time = math.random(
+      math.floor(math.pow(2, tries-0.5)),
+      math.floor(math.pow(2, tries))
+    )
+    io.stdout:write("Sleeping " .. sleep_time .. " seconds.\n")
+    io.stdout:flush()
+    os.execute("sleep " .. sleep_time)
+    return wget.actions.CONTINUE
   end
 
   tries = 0

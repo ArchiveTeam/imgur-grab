@@ -60,10 +60,10 @@ if not WGET_AT:
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
 VERSION = '20230607.01'
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
-MULTI_ITEM_SIZE = 1
+MULTI_ITEM_SIZE = 30
 
 
 ###########################################################################
@@ -154,9 +154,10 @@ class SetBadUrls(SimpleTask):
         items_lower = [s.lower() for s in items]
         with open('%(item_dir)s/%(warc_file_base)s_bad-items.txt' % item, 'r') as f:
             for aborted_item in f:
+                aborted_item_original = aborted_item
                 aborted_item = aborted_item.strip().lower()
                 index = items_lower.index(aborted_item)
-                item.log_output('Item {} is aborted.'.format(aborted_item))
+                item.log_output('Item {} is aborted.'.format(aborted_item_original))
                 items.pop(index)
                 items_lower.pop(index)
         item['item_name'] = '\0'.join(items)
@@ -267,8 +268,7 @@ class WgetArgs(object):
             '--warc-dedup-url-agnostic',
             '--warc-compression-use-zstd',
             '--warc-zstd-dict-no-include',
-            '--header', 'Accept-Language: en-US;q=0.9, en;q=0.8',
-            '--header', 'Cookie: postpagebeta=0'
+            '--header', 'Accept-Language: en-US;q=0.9, en;q=0.8'
         ]
         dict_data = ZstdDict.get_dict()
         with open(os.path.join(item['item_dir'], 'zstdict'), 'wb') as f:
@@ -278,6 +278,21 @@ class WgetArgs(object):
         wget_args.extend([
             '--warc-zstd-dict', ItemInterpolation('%(item_dir)s/zstdict'),
         ])
+
+        random_upper = lambda s: ''.join([
+            c.upper() if random.random() < 0.5 else c
+            for c in s
+        ])
+
+        cookies = ''.join([
+            'Cookie: ',
+            random_upper('postpagebeta'),
+            '=',
+            random_upper(random.choice(('no', 'false'))),
+            '; over18=1'
+        ])
+        print('Using cookies header \'{}\'.'.format(cookies))
+        wget_args.extend(['--header', cookies])
 
         if '--concurrent' in sys.argv:
             concurrency = int(sys.argv[sys.argv.index('--concurrent')+1])
@@ -294,12 +309,17 @@ class WgetArgs(object):
             if item_type == 'i':
                 wget_args.extend(['--warc-header', 'imgur-image: '+item_value])
                 wget_args.append('https://imgur.com/'+item_value)
+            elif item_type == 'album':
+                wget_args.extend(['--warc-header', 'imgur-album: '+item_value])
+                wget_args.append('https://imgur.com/a/'+item_value)
             #elif item_type == 'user':
             #    wget_args.extend(['--warc-header', 'imgur-user: '+item_value])
             #    wget_args.append('https://imgur.com/user/'+item_value)
             #elif item_type == 'gallery':
             #    wget_args.extend(['--warc-header', 'imgur-gallery: '+item_value])
             #    wget_args.append('https://imgur.com/gallery/'+item_value)
+            #elif item_type == 'thumbs':
+            #   pass # TODO
             else:
                 raise Exception('Unknown item')
 
@@ -321,7 +341,7 @@ project = Project(
     title='Imgur',
     project_html='''
         <img class="project-logo" alt="Project logo" src="https://wiki.archiveteam.org/images/c/c4/Imgur-icon.png" height="50px" title=""/>
-        <h2>imgur.com <span class="links"><a href="https://imgur.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/imgur/">Leaderboard</a></span></h2>
+        <h2>imgur.com <span class="links"><a href="https://imgur.com/">Website</a> &middot; <a href="https://tracker.archiveteam.org/imgur/">Leaderboard</a></span></h2>
         <p>Archiving Imgur.</p>
     '''
 )
