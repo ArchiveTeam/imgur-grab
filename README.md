@@ -1,10 +1,8 @@
-imgur-grab
-=============
+# imgur-grab
 
 More information about the archiving project can be found on the ArchiveTeam wiki: [Imgur](https://wiki.archiveteam.org/index.php?title=Imgur)
 
-Setup instructions
-=========================
+## Setup instructions
 
 ### General instructions
 
@@ -25,21 +23,25 @@ We strongly encourage you to join the IRC channel associated with this project i
 
 #### Archive Team Warrior (recommended for most users)
 
-This and other archiving projects can easily be run using the [Archive Team Warrior](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) virtual machine. Follow the [instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) for installing the Warrior, and from the web interface running at http://localhost:8001/, enter the nickname that you want to be shown as on the tracker. You don't need to register it, just pick a nickname you like. Then, select the "Imgur" project in the Warrior interface.
+This and other archiving projects can easily be run using the [Archive Team Warrior](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) virtual machine. Follow the [instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) for installing the Warrior, and from the web interface running at `http://localhost:8001/`, enter the nickname that you want to be shown as on the tracker. There is no registration, just pick a nickname you like. Then, select the `Imgur` project in the Warrior interface.
 
 #### Project-specific Docker container (for more advanced users)
 
-Alternatively, more advanced users can also run projects using Docker. While users of the Warrior can switch between projects using a web interface, Docker containers are specific to each project. However, while the Warrior supports a maximum of 6 concurrent items, the Docker container supports a maximum of 20 concurrent items. The instructions below are a short overview. For more information and detailed explanations of the commands, follow the follow the [Docker instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/Running_Archive_Team_Projects_with_Docker).
+Alternatively, more advanced users can also run projects using Docker. While users of the Warrior can switch between projects using a web interface, Docker containers are specific to each project. However, while the Warrior supports a maximum of 6 concurrent items, a Docker container supports a maximum of 20 concurrent items. The instructions below are a short overview. For more information and detailed explanations of the commands, follow the follow the [Docker instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/Running_Archive_Team_Projects_with_Docker).
 
-It is advised to use watchtower to automatically update the project. This requires watchtower:
+It is advised to use [Watchtower](https://github.com/containrrr/watchtower) to automatically update the project container:
 
-    docker run --name watchtower --restart=unless-stopped -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --label-enable --cleanup --interval 3600
+    docker run -d --name watchtower --restart=unless-stopped -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --label-enable --cleanup --interval 3600
 
-after which the project can be run:
+after which the project container can be run:
 
-    docker run --name archiveteam --label=com.centurylinklabs.watchtower.enable=true --restart=unless-stopped atdr.meo.ws/archiveteam/imgur-grab --concurrent 1 YOURNICKHERE
+    docker run -d --name archiveteam --label=com.centurylinklabs.watchtower.enable=true --restart=unless-stopped atdr.meo.ws/archiveteam/imgur-grab --concurrent 1 YOURNICKHERE
 
-Be sure to replace `YOURNICKHERE` with the nickname that you want to be shown as on the tracker. You don't need to register it, just pick a nickname you like.
+Be sure to replace `YOURNICKHERE` with the nickname that you want to be shown as on the tracker. There is no registration, just pick a nickname you like.
+
+### Supporting Archive Team
+
+Behind the scenes Archive Team has infrastructure to run the projects and process the data with. If you would like to help out with the costs of our infrastructure, a donation on our [Open Collective](https://opencollective.com/archiveteam) would be very welcome.
 
 ### Issues in the code
 

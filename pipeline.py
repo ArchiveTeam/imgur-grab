@@ -42,11 +42,11 @@ if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
 WGET_AT = find_executable(
     'Wget+AT',
     [
-        'GNU Wget 1.21.3-at.20230605.01'
+        'GNU Wget 1.21.3-at.20230623.01'
     ],
     [
          './wget-at',
-         '/home/warrior/data/wget-at-gnutls'
+         '/home/warrior/data/wget-at'
     ]
 )
 
@@ -59,7 +59,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230607.02'
+VERSION = '20230727.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -243,6 +243,7 @@ class WgetArgs(object):
             '--hosts-file', '/dev/null',
             '--resolvconf-file', '/dev/null',
             '--dns-servers', '9.9.9.10,149.112.112.10,2620:fe::10,2620:fe::fe:10',
+            '--reject-reserved-subnets',
             '--content-on-error',
             '--no-http-keep-alive',
             '--no-cookies',
