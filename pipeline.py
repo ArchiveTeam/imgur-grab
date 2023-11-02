@@ -4,6 +4,7 @@ from distutils.version import StrictVersion
 import hashlib
 import os.path
 import random
+import re
 from seesaw.config import realize, NumberConfigValue
 from seesaw.externalprocess import ExternalProcess
 from seesaw.item import ItemInterpolation, ItemValue
@@ -39,14 +40,26 @@ if StrictVersion(seesaw.__version__) < StrictVersion('0.8.5'):
 # 1. does not crash with --version, and
 # 2. prints the required version string
 
+class HigherVersion:
+    def __init__(self, expression, min_version):
+        self._expression = re.compile(expression)
+        self._min_version = min_version
+
+    def search(self, text):
+        for result in self._expression.findall(text):
+            if result >= self._min_version:
+                print('Found version {}.'.format(result))
+                return True
+
 WGET_AT = find_executable(
     'Wget+AT',
-    [
+    HigherVersion(
+        r'(GNU Wget 1\.[0-9]{2}\.[0-9]{1}-at\.[0-9]{8}\.[0-9]{2})[^0-9a-zA-Z\.-_]',
         'GNU Wget 1.21.3-at.20230623.01'
-    ],
+    ),
     [
-         './wget-at',
-         '/home/warrior/data/wget-at'
+        './wget-at',
+        '/home/warrior/data/wget-at'
     ]
 )
 
@@ -59,7 +72,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230727.01'
+VERSION = '20231102.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
 TRACKER_ID = 'imgur'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -388,8 +401,6 @@ pipeline = Pipeline(
             rsync_target_source_path=ItemInterpolation('%(data_dir)s/'),
             rsync_extra_args=[
                 '--recursive',
-                '--partial',
-                '--partial-dir', '.rsync-tmp',
                 '--min-size', '1',
                 '--no-compress',
                 '--compress-level', '0'
