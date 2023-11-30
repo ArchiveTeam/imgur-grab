@@ -510,7 +510,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
           if json["in_gallery"] then
             discover_item(discovered_items, "gallery:" .. item_value)
           end
-          if json["in_gallery"]
+          --[[if json["in_gallery"]
             or (
               json["account_url"]
               and json["adConfig"]["nsfw_score"] == 0
@@ -519,13 +519,13 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
               and not string.match(html, "[sS][eE][xX]")
               and not string.match(html, "[pP][oO][rR][nN]")
               and not json["is_mature"]
-              and not json["nsfw"] ]]
+              and not json["nsfw"] ] ]
             ) then
             io.stdout:write("This is likely not going to be deleted. Skipping.\n")
             io.stdout:flush()
             abort_item()
             return {}
-          end
+          end]]
           --check("https://imgur.com/gallery/" .. json["hash"] .. "/comment/best/hit.json")
           extract_gallery_data(json)
         end
