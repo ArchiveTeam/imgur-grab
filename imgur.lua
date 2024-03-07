@@ -608,6 +608,17 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     abort_item()
     return false
   end
+  local current_domain = string.match(url["url"], "^https?://([^/]+)")
+  if status_code >= 300 and status_code <= 399
+    and (
+      current_domain == "i.imgur.com"
+      or current_domain ~= string.match(http_stat["newloc"], "^https?://([^/]+)")
+    ) then
+    io.stdout:write("Got an unexpected 302.\n")
+    io.stdout:flush()
+    abort_item()
+    return false
+  end
   if string.match(url["url"], "^https?://imgur%.com/[0-9a-zA-Z]+$") then
     if status_code == 404 then
       io.stdout:write("The web page gives 404, checking if this exists on i.imgur.com.\n")
