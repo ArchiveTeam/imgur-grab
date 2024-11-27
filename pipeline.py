@@ -362,7 +362,7 @@ project = Project(
 
 pipeline = Pipeline(
     CheckIP(),
-    GetItemFromTracker('http://{}/{}/multi={}/'
+    GetItemFromTracker('https://{}/{}/multi={}/'
         .format(TRACKER_HOST, TRACKER_ID, MULTI_ITEM_SIZE),
         downloader, VERSION),
     PrepareDirectories(warc_prefix=TRACKER_ID),
@@ -391,7 +391,7 @@ pipeline = Pipeline(
         name='shared:rsync_threads', title='Rsync threads',
         description='The maximum number of concurrent uploads.'),
         UploadWithTracker(
-            'http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
+            'https://%s/%s' % (TRACKER_HOST, TRACKER_ID),
             downloader=downloader,
             version=VERSION,
             files=[
@@ -408,7 +408,7 @@ pipeline = Pipeline(
         ),
     ),
     MaybeSendDoneToTracker(
-        tracker_url='http://%s/%s' % (TRACKER_HOST, TRACKER_ID),
+        tracker_url='https://%s/%s' % (TRACKER_HOST, TRACKER_ID),
         stats=ItemValue('stats')
     )
 )
