@@ -134,7 +134,7 @@ allowed = function(url, parenturl)
     or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?twitter$")
     or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?play$")
     or string.match(url, "^https?://i%.imgur%.com/[^%?]+%?fbplay$")
-    or string.match(url, "^https?://api%.imgur%.com/")
+    --or string.match(url, "^https?://api%.imgur%.com/")
     --or string.match(url, "^https?://imgur%.com/[^/]+/embed%?")
     or string.match(url, "^https?://m%.imgur%.com/")
     or string.match(url, "^https?://[^/]*imgur%.io/")
@@ -430,7 +430,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     if postpagebeta then
       -- for without using the postpagebeta cookie
       local client_id = "546c25a59c58ad7"
-      if string.match(url, "^https?://api%.imgur%.com/") then
+      if string.match(url, "^https?://api%.imgur%.com/")
+        and not string.match(url, "oembed%.xml%?") then
         json = JSON:decode(html)
         if json["error"] or json["errors"] then
           abort()
@@ -441,7 +442,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
         if not json then
           json = JSON:decode(html)
         end
-        if i_json["id"] ~= item_value then
+        if json["id"] ~= item_value then
           io.stdout:write("API data for wrong ID?\n")
           io.stdout:flush()
           abort()
@@ -624,12 +625,13 @@ wget.callbacks.write_to_warc = function(url, http_stat)
       io.stdout:write("The web page gives 404, checking if this exists on i.imgur.com.\n")
       io.stdout:flush()
       webpage_404 = true
+      return false
     elseif status_code ~= 200 then
       io.stdout:write("Odd status code on web page.\n")
       io.stdout:flush()
       abort_item()
+      return false
     end
-    return false
   end
   if (
       (
